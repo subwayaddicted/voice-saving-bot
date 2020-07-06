@@ -2,7 +2,7 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, InlineQueryHan
 from telegram import InlineQueryResultArticle, InputTextMessageContent
 import logging
 
-updater = Updater(token='968628814:AAEyjjPinThWqec11sikYgNzvoxo6JZu3PU', use_context=True)
+updater = Updater(token='test', use_context=True)
 
 dispatcher = updater.dispatcher
 
