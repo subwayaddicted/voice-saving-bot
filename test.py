@@ -1,9 +1,19 @@
-from telegram.ext import Updater, CommandHandler, MessageHandler, InlineQueryHandler, Filters
-from telegram import InlineQueryResultArticle, InputTextMessageContent
-import logging
+from telegram.ext import Updater, CommandHandler, MessageHandler, InlineQueryHandler, Filters, CallbackContext
+from telegram import InlineQueryResultArticle, InputTextMessageContent, Update
+import logging, json, mysql.connector
 
-updater = Updater(token='test', use_context=True)
+with open("config.json") as json_config:
+	data = json.load(json_config)
 
+db = mysql.connector.connect(
+	data["mysql"]["host"],
+	data["mysql"]["user"],
+	data["mysql"]["password"],
+	data["mysql"]["db"]
+)
+db_cursor = db.cursor()
+
+updater = Updater(token=data["telegram"]["token"], use_context=True)
 dispatcher = updater.dispatcher
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -11,54 +21,39 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 
 # Functions
-def start(update, context):
+def start(update: Update, context: CallbackContext):
 	context.bot.send_message(chat_id=update.effective_chat.id, text="I'm a bot, please talk to me!")
 
 
-def echo(update, context):
-	context.bot.send_message(chat_id=update.effective_chat.id, text='Eat this')#text=update.message.text)
+def echo(update: Update, context: CallbackContext):
+	context.bot.send_message(chat_id=update.effective_chat.id, text=update.message.text)
 
 
-def caps(update, context):
-	text_caps = ' '.join(context.args).upper()
-	context.bot.send_message(chat_id=update.effective_chat.id, text=text_caps)
+def voice(update: Update, context: CallbackContext):
+	voice_id = update.message.voice.file_id
+	user_id = update.effective_user.id
+	file = context.bot.getFile(update.message.voice.file_id)
+	file.download('voice_messages/'+str(user_id)+'__'+voice_id+'.ogg')
+
+	context.bot.send_message(chat_id=update.effective_chat.id, text='Voice saved!')
 
 
-def unknown(update, context):
+def unknown(update: Update, context: CallbackContext):
 	context.bot.send_message(chat_id=update.effective_chat.id, text="Sorry, I didn't understand that command.")
 
 
-def inline_caps(update, context):
-	query = update.inline_query.query
-	if not query:
-		return
-	results = list()
-	results.append(
-		InlineQueryResultArticle(
-			id=query.upper(),
-			title='Caps',
-			input_message_content=InputTextMessageContent(query.upper())
-		)
-	)
-	context.bot.answer_inline_query(update.inline_query.id, results)
-
-
 # Commands handlers
-start_handler = CommandHandler('start', start)
-dispatcher.add_handler(start_handler)
-
-caps_handler = CommandHandler('caps', caps)
-dispatcher.add_handler(caps_handler)
+dispatcher.add_handler(CommandHandler('start', start))
 
 # Message Handlers
-echo_handler = MessageHandler(Filters.text & (~Filters.command), echo)
-dispatcher.add_handler(echo_handler)
+dispatcher.add_handler(MessageHandler(Filters.text & (~Filters.command), echo))
 
-unknown_handler = MessageHandler(Filters.command, unknown)
-dispatcher.add_handler(unknown_handler)
+dispatcher.add_handler(MessageHandler(Filters.voice, voice))
+
+dispatcher.add_handler(MessageHandler(Filters.command, unknown))
 
 # Inline Handlers
-inline_caps_handler = InlineQueryHandler(inline_caps)
-dispatcher.add_handler(inline_caps_handler)
+# Handlers go brrr..
 
 updater.start_polling()
+updater.idle()
