@@ -1,0 +1,11 @@
+{
+  "mysql": {
+        "host":"localhost",
+        "user":"test-bot",
+        "password":"test-bot-password",
+        "db":"test_bot"
+  },
+  "telegram": {
+    "token": "test"
+  }
+}
