@@ -2,3 +2,4 @@
 voice_messages/*
 config.json
 bot-venv
+__pycache__
