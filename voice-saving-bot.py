@@ -42,6 +42,7 @@ class VoiceSavingBot(bot.Bot):
 		self.logger.info("User %s %s with id: %d started bot", update.effective_user.first_name,
 						 update.effective_user.last_name,
 						 update.effective_user.id)
+
 		context.bot.send_message(chat_id=update.effective_chat.id,
 								 text="I'm a bot, please talk to me!")
 
@@ -57,8 +58,8 @@ class VoiceSavingBot(bot.Bot):
 
 		self.logger_message(update, 'sent voice stored as ' + file_name)
 
-		update.message.reply_text('Voice saved! Please send me a command/codename which you want it to refer to! Or '
-								  'just send /cancel if you changed your mind.')
+		update.message.reply_text('Voice saved! Please send me a command which you want it to refer to! Just write down the word (without /?! or ~).'
+								  'Or just send /cancel if you changed your mind.')
 
 		return COMMAND
 
@@ -67,7 +68,7 @@ class VoiceSavingBot(bot.Bot):
 
 		self.logger_message(update, 'set command for ' + self.voice_file_name + ' named ' + command)
 
-		sql = "INSERT INTO voice_messages (user_id, filename, command) VALUES (%d, %s, %s)"
+		sql = "INSERT INTO voice_messages (user_id, filename, command) VALUES (%s, %s, %s)"
 		val = (update.effective_user.id, self.voice_file_name, '-' + command)
 		self.db_cursor.execute(sql, val)
 		self.db.commit()
@@ -89,14 +90,24 @@ class VoiceSavingBot(bot.Bot):
 	def retrieve(self, update: Update, context: CallbackContext):
 		message = update.message.text
 
-		if message != '-oof':
-			context.bot.send_message(chat_id=update.effective_chat.id, text="Sorry, I didn't understand that command.")
-		# re.findall(r'\bs\w+', message)
-		else:
-			filename = 'voice_messages/roblox-death-sound_1.ogg'
-			file = open(filename, 'rb')
+		# todo: regex filters
+		# filtered_message = re.findall(r'\b-\w+', message)
+		# self.logger_message(update, 'command filtered: ' + filtered_message[0])
+
+		self.db_cursor.execute("SELECT filename FROM voice_messages WHERE command =%s", (message, ))
+
+		result = self.db_cursor.fetchone()
+		filename = result[0]
+
+		if result is not None:
+			self.logger_message(update, 'retrieved message ' + filename + ' with ' + message + ' command')
+
+			file_path = 'voice_messages/' + filename + '.ogg'
+			file = open(file_path, 'rb')
 
 			context.bot.send_voice(chat_id=update.effective_chat.id, voice=file)
+		else:
+			context.bot.send_message(chat_id=update.effective_chat.id, text="Sorry, I didn't understand that command.")
 
 	def unknown(self, update: Update, context: CallbackContext):
 		self.logger_message(update, 'tried unknown command: ' + update.message.text)
