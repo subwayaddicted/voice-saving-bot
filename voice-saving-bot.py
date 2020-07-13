@@ -1,6 +1,6 @@
 from telegram import Update
 from telegram.ext import CommandHandler, MessageHandler, Filters, CallbackContext, ConversationHandler
-import bot
+import bot, re
 
 VOICE, COMMAND = range(2)
 
@@ -29,8 +29,9 @@ class VoiceSavingBot(bot.Bot):
 			fallbacks=[CommandHandler('cancel', self.cancel)],
 		))
 
-		# Unknown Command Handler
-		dispatcher.add_handler(MessageHandler(Filters.command, self.unknown))
+		# Message Handlers
+		dispatcher.add_handler(MessageHandler(Filters.text, self.retrieve))  # Retrieve command starting with -
+		dispatcher.add_handler(MessageHandler(Filters.command, self.unknown))  # Unknown Command
 
 	def save(self, update: Update, context: CallbackContext):
 		update.message.reply_text('Please send me voice message!')
@@ -66,10 +67,13 @@ class VoiceSavingBot(bot.Bot):
 
 		self.logger_message(update, 'set command for ' + self.voice_file_name + ' named ' + command)
 
+		sql = "INSERT INTO voice_messages (user_id, filename, command) VALUES (%d, %s, %s)"
+		val = (update.effective_user.id, self.voice_file_name, '-' + command)
+		self.db_cursor.execute(sql, val)
+		self.db.commit()
+
 		update.message.reply_text(
 			'Voice message is saved! You can access it by sending it with "-" prefix, check it out!')
-
-		# todo: SQL save info about voice
 
 		return ConversationHandler.END
 
@@ -81,6 +85,18 @@ class VoiceSavingBot(bot.Bot):
 		# todo: SQL delete info about voice
 
 		return ConversationHandler.END
+
+	def retrieve(self, update: Update, context: CallbackContext):
+		message = update.message.text
+
+		if message != '-oof':
+			context.bot.send_message(chat_id=update.effective_chat.id, text="Sorry, I didn't understand that command.")
+		# re.findall(r'\bs\w+', message)
+		else:
+			filename = 'voice_messages/roblox-death-sound_1.ogg'
+			file = open(filename, 'rb')
+
+			context.bot.send_voice(chat_id=update.effective_chat.id, voice=file)
 
 	def unknown(self, update: Update, context: CallbackContext):
 		self.logger_message(update, 'tried unknown command: ' + update.message.text)
