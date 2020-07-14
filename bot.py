@@ -13,7 +13,7 @@ class Bot:
 		self.updater = Updater(token=self.data["telegram"]["token"], use_context=True)
 		self.dispatcher = self.updater.dispatcher
 
-		logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+		logging.basicConfig(filename='all.log' ,format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
 							level=logging.INFO)
 		self.logger = logging.getLogger(__name__)
 
